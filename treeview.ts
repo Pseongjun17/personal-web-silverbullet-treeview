@@ -12,7 +12,6 @@ import {
   setSizeOverride,
   setTreeViewEnabled,
 } from "./config.ts";
-import { supportsPageRenaming } from "./compatability.ts";
 import { getPlugConfig } from "./config.ts";
 
 /**
@@ -88,6 +87,10 @@ export async function showTree() {
     iconXCircle,
     iconEye,
     iconEyeOff,
+    iconFilePlus,
+    iconPlusSquare,
+    iconEdit,
+    iconTrash,
   ] = await Promise.all([
     asset.readAsset(PLUG_NAME, "assets/sortable-tree/sortable-tree.css"),
     asset.readAsset(PLUG_NAME, "assets/sortable-tree/sortable-tree.js"),
@@ -100,6 +103,10 @@ export async function showTree() {
     asset.readAsset(PLUG_NAME, "assets/icons/x-circle.svg"),
     asset.readAsset(PLUG_NAME, "assets/icons/eye.svg"),
     asset.readAsset(PLUG_NAME, "assets/icons/eye-off.svg"),
+    asset.readAsset(PLUG_NAME, "assets/icons/file-plus.svg"),
+    asset.readAsset(PLUG_NAME, "assets/icons/plus-square.svg"),
+    asset.readAsset(PLUG_NAME, "assets/icons/edit-2.svg"),
+    asset.readAsset(PLUG_NAME, "assets/icons/trash-2.svg"),
   ]);
 
   const { currentPage, nodes } = await getPageTree(config, showHidden);
@@ -114,6 +121,13 @@ export async function showTree() {
       enabled: config.dragAndDrop.enabled,
     },
     revealOnLoad: config.revealOnLoad,
+    nodeActions: {
+      icons: {
+        filePlus: iconFilePlus,
+        edit: iconEdit,
+        trash: iconTrash,
+      },
+    },
   };
 
   const sizeOverride = await getSizeOverride();
@@ -133,6 +147,8 @@ export async function showTree() {
         <div class="treeview-header">
           <div class="treeview-actions">
             <div class="treeview-actions-left">
+              <button type="button" data-treeview-action="new-page" title="New page">${iconFilePlus}</button>
+              <button type="button" data-treeview-action="new-folder" title="New folder">${iconPlusSquare}</button>
               <button type="button" data-treeview-action="expand-all" title="Expand all">${iconFolderPlus}</button>
               <button type="button" data-treeview-action="collapse-all" title="Collapse all">${iconFolderMinus}</button>
               <button type="button" data-treeview-action="reveal-current-page" title="Reveal current page">${iconNavigation2}</button>

@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-* Nothing since 0.15
+### Added
+
+* File/folder management directly from the tree: new page/folder (toolbar buttons and right-click on any node or empty space), rename, and delete (single pages, attachments, and whole folders including everything nested inside them) are now available via hover icons and a right-click context menu on each node. Note that SilverBullet has no concept of an empty folder, so "New folder" creates a placeholder page at that path.
 
 ## [0.15] - 2025-03-26
 

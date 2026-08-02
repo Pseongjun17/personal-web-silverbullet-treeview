@@ -9,6 +9,14 @@ This plugs adds a tree view that allows you to navigate your SilverBullet pages 
 
 Dragging-and-dropping files and folders is supported but requires SilverBullet v0.7.2 or greater. If running < v0.7.2, this feature will be automatically disabled (regardless of [configuration](#configuration)).
 
+### Managing pages and folders
+
+Hovering over a node reveals icons to add a page inside it, rename it, or delete it. Right-clicking a node (or empty space in the tree) opens a context menu with the same actions, plus creating a new folder. The toolbar also has buttons to create a new page or folder at the root.
+
+Deleting a folder deletes every page and attachment nested inside it — this cannot be undone, so a confirmation listing how many items are affected is always shown first.
+
+Note that SilverBullet has no concept of an empty folder: a folder only exists in the tree as long as it contains at least one page or attachment. "New folder" creates an empty placeholder page at that path so the folder shows up immediately; renaming/moving works the same way for folders as for pages, since a folder is really just a shared name prefix.
+
 ## Installation
 
 ### SilverBullet v1
