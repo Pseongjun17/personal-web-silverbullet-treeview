@@ -123,6 +123,14 @@ const treeViewConfigSchema = z.object({
   revealOnLoad: z.boolean().optional().default(true),
 
   /**
+   * Whether to hide pages under the `Library/` namespace (installed
+   * libraries/plugs) from the tree by default. Still shown when "Show
+   * excluded files" is toggled on. Defaults to true since library content
+   * is rarely something you want to browse/edit alongside your own notes.
+   */
+  hideLibraries: z.boolean().optional().default(true),
+
+  /**
    * Attachment display options
    */
   attachments: z.object({

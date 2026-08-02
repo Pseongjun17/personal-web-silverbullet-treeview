@@ -22,6 +22,13 @@ export type NodeData = {
    */
   isCurrentPage?: boolean;
 
+  /**
+   * True if this node has one or more child nodes in the tree. Computed
+   * after the tree is built/sorted (see `getPageTree`), since it depends on
+   * the final set of children rather than anything intrinsic to the node.
+   */
+  hasChildren?: boolean;
+
   nodeType: string;
 };
 
@@ -43,6 +50,12 @@ export type TreeNode = {
 };
 
 /**
+ * Matches pages/attachments under the `Library/` namespace (installed
+ * libraries/plugs), used by `config.hideLibraries`.
+ */
+const LIBRARY_PREFIX_REGEX = /^Library(\/|$)/;
+
+/**
  * Generates a TreeNode array from the list of pages in the current space.
  */
 export async function getPageTree(config: TreeViewConfig, showHidden = false) {
@@ -58,6 +71,10 @@ export async function getPageTree(config: TreeViewConfig, showHidden = false) {
   const root = { nodes: [] as TreeNode[] };
 
   if (!showHidden) {
+    if (config.hideLibraries) {
+      pages = pages.filter((page) => !LIBRARY_PREFIX_REGEX.test(page.name));
+    }
+
     if (config.pageExcludeRegex) {
       const deprecationWarning = `${PLUG_DISPLAY_NAME}:
 \`pageExcludeRegex\` setting is deprecated. Please use \`exclusions\`:
@@ -132,7 +149,10 @@ treeview:
       const cmp = a.data.title.localeCompare(b.data.title);
       return sortOrder === "desc" ? -cmp : cmp;
     });
-    nodes.forEach((n) => sortNodes(n.nodes));
+    nodes.forEach((n) => {
+      n.data.hasChildren = n.nodes.length > 0;
+      sortNodes(n.nodes);
+    });
   };
 
   pages.forEach((page) => {
@@ -189,6 +209,10 @@ treeview:
   // Add attachments if enabled
   if (config.attachments?.enabled) {
     let attachments = await space.listAttachments() as AttachmentMeta[];
+
+    if (!showHidden && config.hideLibraries) {
+      attachments = attachments.filter((a) => !LIBRARY_PREFIX_REGEX.test(a.name));
+    }
 
     // Filter by extension regex if provided
     if (!showHidden && config.attachments.extensionExcludeRegex) {

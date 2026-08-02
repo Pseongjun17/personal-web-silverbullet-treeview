@@ -94,6 +94,7 @@ async function createEntry(parentName, isFolder) {
 
   try {
     await syscall("space.writePage", name, "");
+    await deleteIfEmptyPlaceholder(parentName);
     await syscall("system.invokeFunction", "treeview.show");
     await syscall("editor.navigate", name, false, false);
   } catch (err) {
@@ -102,6 +103,29 @@ async function createEntry(parentName, isFolder) {
       `Failed to create "${name}": ${err?.message ?? err}`,
       "error",
     );
+  }
+}
+
+/**
+ * Deletes `parentName` if it's a page with no content -- i.e. an empty
+ * "placeholder" (whether created via "New folder" or an untouched "New
+ * page") that has just gained a child and is no longer needed, since the
+ * folder it represents will still show up in the tree from its children's
+ * shared name prefix alone. A no-op if `parentName` is the root, doesn't
+ * exist as a real page (a plain virtual folder), or has real content.
+ * @param {string} parentName
+ */
+async function deleteIfEmptyPlaceholder(parentName) {
+  if (!parentName) {
+    return;
+  }
+  try {
+    const parentMeta = await syscall("space.getPageMeta", parentName);
+    if (parentMeta.size === 0) {
+      await syscall("space.deletePage", parentName);
+    }
+  } catch (_err) {
+    // Not a real page (just a virtual folder from a name prefix) -- nothing to clean up.
   }
 }
 
@@ -240,19 +264,38 @@ function performNodeAction(action, name, nodeType) {
 }
 
 /**
+ * Whether a node is a safe place to add a page/folder inside of: a (virtual)
+ * folder, a page that's already acting as a folder note (has children), or
+ * a page with no content of its own yet (nothing to accidentally bury under
+ * a subtree). Real, non-empty pages are excluded so that clicking around
+ * the tree can't silently turn someone's notes into a folder note.
+ * @param {SortableTreeNode["data"]} data
+ * @returns {boolean}
+ */
+function canAddChildTo(data) {
+  if (data.nodeType === "folder") {
+    return true;
+  }
+  if (data.nodeType !== "page") {
+    return false;
+  }
+  return data.hasChildren === true || data.size === 0;
+}
+
+/**
  * Builds the hover-revealed action icons markup for a single node label.
  * @param {SortableTreeNode["data"]} data
  * @param {Object} icons
+ * @param {boolean} canAddChild
  * @returns {string}
  */
-function renderNodeActions(data, icons) {
-  const canHaveChildren = data.nodeType !== "attachment";
+function renderNodeActions(data, icons, canAddChild) {
   const name = escapeAttr(data.name);
 
   return `
     <span class="tv-node-actions">
       ${
-    canHaveChildren
+    canAddChild
       ? `<button type="button" class="tv-node-action" data-tv-action="add-page" data-tv-name="${name}" data-tv-node-type="${data.nodeType}" title="Add page here">${
         icons.filePlus ?? "+"
       }</button>`
@@ -368,6 +411,12 @@ function createTreeView(config) {
         disableConfirmation: !config.dragAndDrop.confirmOnRename,
       });
 
+      if (success && targetParentNode) {
+        // If the drop target was an empty placeholder page, it's now been
+        // superseded by its new child and can be cleaned up.
+        await deleteIfEmptyPlaceholder(targetParentNode.data.name);
+      }
+
       if (success && config.currentPage.indexOf(oldPrefix) === 0) {
         // If this renamed the current page, navigate to it at it's updated name.
         await syscall("editor.navigate", config.currentPage.replace(oldPrefix, newPrefix), false, false);
@@ -402,17 +451,20 @@ function createTreeView(config) {
      * @param {SortableTreeNode["data"]} data
      * @returns {string}
      */
-    renderLabel: (data) => `
+    renderLabel: (data) => {
+      const canAddChild = canAddChildTo(data);
+      return `
       <span
         data-current-page="${JSON.stringify(data.isCurrentPage || false)}"
         data-node-type="${data.nodeType}"
         data-node-name="${escapeAttr(data.name)}"
+        data-can-add-child="${canAddChild}"
         data-permission="${data.perm}"
         title="${data.name}" >
         <span class="tv-node-title">${data.title}</span>
-        ${renderNodeActions(data, icons)}
-      </span>`
-    ,
+        ${renderNodeActions(data, icons, canAddChild)}
+      </span>`;
+    },
   });
 }
 
@@ -537,7 +589,7 @@ function initializeTreeViewPanel(config) {
     const name = nodeEl.dataset.nodeName;
     const nodeType = nodeEl.dataset.nodeType;
     const items = [];
-    if (nodeType !== "attachment") {
+    if (nodeEl.dataset.canAddChild === "true") {
       items.push({ label: "New page here", action: "add-page" });
       items.push({ label: "New folder here", action: "add-folder" });
     }

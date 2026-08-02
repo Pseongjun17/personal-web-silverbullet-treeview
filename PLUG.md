@@ -1,5 +1,5 @@
 ---
-name: Library/joekrill/silverbullet-treeview
+name: Library/silverbullet-treeview
 tags: meta/library
 files:
 - treeview.plug.js
@@ -12,7 +12,7 @@ Dragging-and-dropping files and folders is supported but requires SilverBullet v
 
 ### Managing pages and folders
 
-Hovering over a node reveals icons to add a page inside it, rename it, or delete it. Right-clicking a node (or empty space in the tree) opens a context menu with the same actions, plus creating a new folder. The toolbar also has buttons to create a new page or folder at the root. Deleting a folder deletes everything nested inside it and cannot be undone, so a confirmation is always shown first. Note that SilverBullet has no concept of an empty folder, so "New folder" creates a placeholder page at that path.
+Hovering over a node reveals icons to add a page inside it, rename it, or delete it. Right-clicking a node (or empty space in the tree) opens a context menu with the same actions, plus creating a new folder. The toolbar also has buttons to create a new page or folder at the root. Deleting a folder deletes everything nested inside it and cannot be undone, so a confirmation is always shown first. Note that SilverBullet has no concept of an empty folder, so "New folder" creates a placeholder page at that path; "add page/folder here" is only offered on folders, pages that already have children, and pages with no content of their own (not on pages you've actually written into), and an empty placeholder is automatically deleted as soon as it gets its first real child.
 
 ## Configuration
 
@@ -24,7 +24,7 @@ In SilverBullet v2, this plug can be configured using the `config` object in you
 ```lua
 config.set {
   plugs = {
-    "github:joekrill/silverbullet-treeview/treeview.plug.js"
+    "github:Pseongjun17/personal-web-silverbullet-treeview/treeview.plug.js"
   },
 
   -- The treeview plug configuration
@@ -50,6 +50,11 @@ config.set {
       -- dropping pages that causes them to be renamed/moved.
       confirmOnRename = true
     },
+
+    -- Set to false to also show pages/attachments under the `Library/`
+    -- namespace (installed libraries/plugs). Regardless of this setting,
+    -- they're always shown when "Show excluded files" is toggled on.
+    hideLibraries = true,
 
     -- An array of exclusion rules that will exclude pages from being
     -- displayed in the sidebar.

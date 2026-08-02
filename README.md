@@ -17,6 +17,8 @@ Deleting a folder deletes every page and attachment nested inside it — this ca
 
 Note that SilverBullet has no concept of an empty folder: a folder only exists in the tree as long as it contains at least one page or attachment. "New folder" creates an empty placeholder page at that path so the folder shows up immediately; renaming/moving works the same way for folders as for pages, since a folder is really just a shared name prefix.
 
+To avoid leftover clutter and accidentally nesting things under a page you're actively writing in, "add page/folder here" is only available on folders, pages that already have children, and pages with no content yet (including a freshly created placeholder). As soon as a placeholder page gets its first real child — whether added through the tree or by dragging a page onto it — the empty placeholder is automatically deleted, since the folder it represents keeps existing through its child's name prefix alone.
+
 ## Installation
 
 ### SilverBullet v1
@@ -80,6 +82,11 @@ treeview:
     # Set to false to disable the confirmation prompt shown when dragging and
     # dropping pages that causes them to be renamed/moved.
     confirmOnRename: true
+
+  # Set to false to also show pages/attachments under the `Library/`
+  # namespace (installed libraries/plugs). Regardless of this setting,
+  # they're always shown when "Show excluded files" is toggled on.
+  hideLibraries: true
 
   # An array of exclusion rules that will exclude pages from being
   # displayed in the sidebar.
@@ -145,6 +152,11 @@ config.set {
       -- dropping pages that causes them to be renamed/moved.
       confirmOnRename = true
     },
+
+    -- Set to false to also show pages/attachments under the `Library/`
+    -- namespace (installed libraries/plugs). Regardless of this setting,
+    -- they're always shown when "Show excluded files" is toggled on.
+    hideLibraries = true,
 
     -- An array of exclusion rules that will exclude pages from being
     -- displayed in the sidebar.

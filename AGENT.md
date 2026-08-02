@@ -71,6 +71,8 @@ treeview.plug.js      ← 빌드 산출물 (커밋되어 있음, 소스 수정 �
 
 첨부파일(attachment) exclusion은 현재 `regex` 타입만 별도로 재적용됩니다 (`api.ts:200` 부근) — tags/space-function으로 확장하려면 이 블록도 함께 고쳐야 함.
 
+`hideLibraries`(기본값 `true`)는 이 범용 `exclusions` 배열과는 별개로, `config.ts`에 독립된 boolean 필드로 존재하는 **전용 토글**입니다 (`Library/` prefix를 하드코딩으로 숨김). "사용자가 매번 exclusion 규칙을 직접 안 써도 되는, 기본값이 있는 자주 쓰는 필터"를 추가하고 싶을 때 이 패턴(전용 필드 + `!showHidden` 블록 안에서 `pages`/`attachments`에 동일하게 적용)을 참고하세요. `showHidden`(눈 아이콘 토글)이 켜지면 이 필터도 다른 exclusion처럼 무시됩니다.
+
 ## 상태 저장: `clientStore` vs `config`
 
 - `config` (zod 스키마, space 전체 공용, SETTINGS/CONFIG에서 옴): position, size, exclusions 등 — **여러 기기/사용자가 공유하는 설정**.
@@ -79,7 +81,7 @@ treeview.plug.js      ← 빌드 산출물 (커밋되어 있음, 소스 수정 �
 ## 빌드/배포
 
 - `deno task build` → `silverbullet plug:compile -c deno.json treeview.plug.yaml` 실행 (SilverBullet CLI가 로컬에 설치되어 있어야 함, 단순 `deno` 설치만으론 부족).
-- `deno task watch`로 변경 감시 빌드 가능.
+- `deno task watch`로 변경 감시 빌드 가능.   
 - **중요**: 사용자는 `github:joekrill/silverbullet-treeview/treeview.plug.js`처럼 컴파일된 `treeview.plug.js`를 직접 참조해서 설치합니다. 즉 소스(`*.ts`, `assets/*`)를 고치고 나면 **반드시 `deno task build`로 재빌드하고 `treeview.plug.js`도 함께 커밋**해야 실제로 반영됩니다 (과거 커밋 로그에 "Rebuild plug bundle"만 단독으로 있는 커밋들이 이 패턴).
 - 테스트: `deno.json`에 `"test": "deno test -A --unstable-kv --unstable-worker-options"` 태스크가 정의되어 있지만, **현재 저장소에는 `*_test.ts` 파일이 하나도 없습니다.** 새로 로직을 추가한다면(특히 `filters/`, `api.ts`의 트리 변환 로직) 이 태스크를 활용해 유닛 테스트를 신설하는 것을 고려하세요.
 
@@ -92,9 +94,11 @@ treeview.plug.js      ← 빌드 산출물 (커밋되어 있음, 소스 수정 �
 - **툴바 버튼**: `treeview.ts`의 헤더에 추가된 "New page"/"New folder" 버튼 → `handleAction()`의 `"new-page"`/`"new-folder"` 케이스 → 루트 경로로 `createEntry("", ...)` 호출.
 
 핵심 함수 (모두 `assets/treeview.js`):
-- `createEntry(parentName, isFolder)` — `editor.prompt`로 이름을 받고 `space.writePage(name, "")`로 생성. **SilverBullet에는 빈 폴더 개념이 없으므로** "폴더 생성"도 결국 그 경로에 내용 없는 placeholder 페이지 하나를 만드는 것입니다 (하위에 다른 페이지가 생기면 자동으로 "folder note"로 표시됨 — `api.ts`의 폴더/페이지 판별 로직 참고).
+- `createEntry(parentName, isFolder)` — `editor.prompt`로 이름을 받고 `space.writePage(name, "")`로 생성. **SilverBullet에는 빈 폴더 개념이 없으므로** "폴더 생성"도 결국 그 경로에 내용 없는 placeholder 페이지 하나를 만드는 것입니다 (하위에 다른 페이지가 생기면 자동으로 "folder note"로 표시됨 — `api.ts`의 폴더/페이지 판별 로직 참고). 생성 직후 `deleteIfEmptyPlaceholder(parentName)`을 호출.
 - `renameEntry(name)` — 새 이름을 받아 드래그앤드롭이 이미 쓰던 `index.renamePrefixCommand`를 그대로 재사용합니다. 단일 페이지든 폴더(prefix)든 동일하게 동작하고, 백링크 갱신도 그 커맨드가 알아서 처리합니다.
 - `deleteEntry(name, nodeType)` — `nodeType`이 `"attachment"`가 아니면 **트리의 nodeType 라벨을 신뢰하지 않고** `space.listPages()`/`listAttachments()`를 다시 조회해서 `name` 자신과 `name + "/"`로 시작하는 모든 페이지·첨부파일을 찾아 전부 삭제합니다. 이렇게 하면 순수 가상 폴더든, 자식이 있는 "folder note" 페이지든 상관없이 항상 하위 전체가 올바르게 삭제됩니다. 삭제는 되돌릴 수 없으므로 영향받는 파일 개수를 포함한 확인 메시지를 항상 띄웁니다.
+- `deleteIfEmptyPlaceholder(parentName)` — `parentName`이 실제 페이지이면서 `size === 0`(내용 없음)이면 삭제합니다. `createEntry`가 자식을 만든 직후, 그리고 드래그앤드롭 `confirm` 콜백이 이동을 성공시킨 직후(`targetParentNode`가 있을 때) 둘 다에서 호출됩니다 — **placeholder는 "언제 지워지냐"의 답은 "빈 상태로 있다가 처음으로 실제 자식을 갖게 되는 바로 그 순간"** 입니다. 가상 폴더(nodeType `"folder"`, 실제 페이지가 아님)에 대해서는 `space.getPageMeta`가 "Not found"로 실패하므로 자연스럽게 스킵됩니다.
+- `canAddChildTo(data)` — "여기에 추가" 액션(호버 아이콘 + 컨텍스트 메뉴)을 보여줄지 결정하는 유일한 판단 지점입니다. `nodeType === "folder"`이거나, `nodeType === "page"`이면서 `hasChildren === true`(이미 폴더노트)이거나 `size === 0`(아직 아무 내용도 안 쓴 페이지·placeholder)일 때만 허용합니다. **실제 내용이 있는 일반 페이지 위에는 절대 노출되지 않도록** 하는 게 목적 — 안 그러면 트리에서 무심코 클릭 몇 번으로 작성 중이던 페이지가 폴더노트로 바뀌어버릴 수 있습니다. `renderLabel`이 이 값을 `data-can-add-child` 속성으로 라벨에 심어두고, 호버 아이콘과 컨텍스트 메뉴 둘 다 이 하나의 속성만 읽습니다 (판단 로직 중복 없음). `data.hasChildren`은 `api.ts`의 `sortNodes`가 트리를 다 만들고 정렬한 뒤에 채워주는 필드이고, `data.size`는 `PageMeta`(→ `index.queryLuaObjects`)에 원래 들어있는 필드를 그대로 씁니다.
 
 노드 액션 버튼(`[data-tv-action]`)의 클릭/mousedown은 `treeElement`에 **capture 단계**로 등록한 `interceptNodeAction`이 가장 먼저 가로채서 `stopPropagation()`합니다 — 그래야 SortableTree 라이브러리 자체의 드래그 시작/노드 클릭(페이지 이동) 로직이 절대 끼어들지 않습니다. 이 아이콘/메뉴 관련 UI를 수정할 때 이 가로채기 순서를 깨지 않도록 주의하세요.
 
